@@ -2,7 +2,6 @@ package btreeset
 
 import (
 	"bytes"
-	"sync"
 )
 
 const maxItems = 255
@@ -20,7 +19,7 @@ type node struct {
 
 // BTreeSet is an ordered set of keys
 type BTreeSet struct {
-	sync.RWMutex
+	//sync.RWMutex
 	height int
 	root   *node
 	length int
@@ -52,10 +51,10 @@ func (n *node) find(key []byte) (index int, found bool) {
 	return index, found
 }
 
-// Set or replace a value for a key
+// Set or replace a key
 func (tr *BTreeSet) Set(key []byte) (replaced bool) {
-	tr.Lock()
-	defer tr.Unlock()
+	//tr.Lock()
+	//defer tr.Unlock()
 	if tr.root == nil {
 		tr.root = new(node)
 		tr.root.items[0] = item{key}
@@ -156,17 +155,17 @@ func (n *node) scan(iter func(key []byte) bool, height int) bool {
 	return n.children[n.numItems].scan(iter, height-1)
 }
 
-// Get a value for key
-func (tr *BTreeSet) Get(key []byte) (gotten bool) {
-	tr.RLock()
-	defer tr.RUnlock()
+// Has return tue if key exists
+func (tr *BTreeSet) Has(key []byte) (gotten bool) {
+	//tr.RLock()
+	//defer tr.RUnlock()
 	if tr.root == nil {
 		return
 	}
-	return tr.root.get(key, tr.height)
+	return tr.root.has(key, tr.height)
 }
 
-func (n *node) get(key []byte, height int) (gotten bool) {
+func (n *node) has(key []byte, height int) (gotten bool) {
 	i, found := n.find(key)
 	if found {
 		return true
@@ -174,7 +173,7 @@ func (n *node) get(key []byte, height int) (gotten bool) {
 	if height == 0 {
 		return false
 	}
-	return n.children[i].get(key, height-1)
+	return n.children[i].has(key, height-1)
 }
 
 // Len returns the number of items in the tree

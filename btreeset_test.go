@@ -217,7 +217,7 @@ func TestBTreeSet(t *testing.T) {
 
 	// get each value
 	for _, key := range keys {
-		gotten := tr.Get([]byte(key))
+		gotten := tr.Has([]byte(key))
 		if !gotten {
 			t.Fatal("expected true")
 		}
@@ -254,7 +254,7 @@ func TestBTreeSet(t *testing.T) {
 	}
 
 	// try to get an invalid item
-	gotten := tr.Get([]byte("invalid"))
+	gotten := tr.Has([]byte("invalid"))
 	if gotten {
 		t.Fatal("expected false")
 	}
@@ -355,7 +355,7 @@ func TestBTreeSet(t *testing.T) {
 	}
 
 	// do some stuff on an empty tree
-	gotten = tr.Get([]byte(keys[0]))
+	gotten = tr.Has([]byte(keys[0]))
 	if gotten {
 		t.Fatal("expected false")
 	}
@@ -394,7 +394,7 @@ func BenchmarkTidwallSequentialGet(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		tr.Get([]byte(keys[i]))
+		tr.Has([]byte(keys[i]))
 	}
 }
 
@@ -415,7 +415,7 @@ func BenchmarkTidwallRandomGet(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		tr.Get([]byte(keys[i]))
+		tr.Has([]byte(keys[i]))
 	}
 }
 
@@ -441,7 +441,7 @@ func TestBTreeSet256(t *testing.T) {
 			}
 		}
 		for _, i := range rand.Perm(256) {
-			ok := tr.Get([]byte(fmt.Sprintf("%d", i)))
+			ok := tr.Has([]byte(fmt.Sprintf("%d", i)))
 			if !ok {
 				t.Fatal("expected true")
 			}
@@ -454,7 +454,7 @@ func TestBTreeSet256(t *testing.T) {
 			}
 		}
 		for _, i := range rand.Perm(256) {
-			ok := tr.Get([]byte(fmt.Sprintf("%d", i)))
+			ok := tr.Has([]byte(fmt.Sprintf("%d", i)))
 			if ok {
 				t.Fatal("expected false")
 			}
@@ -514,7 +514,7 @@ func testBTreeSetRandom(t *testing.T, r *rand.Rand, keys []string, count *uint32
 	}
 	shuffle(r, keys)
 	for i := 0; i < len(keys); i++ {
-		ok := tr.Get([]byte(keys[i]))
+		ok := tr.Has([]byte(keys[i]))
 		if !ok {
 			t.Fatalf("expected '%v', got '%v'", keys[i], "")
 		}
@@ -525,7 +525,7 @@ func testBTreeSetRandom(t *testing.T, r *rand.Rand, keys []string, count *uint32
 		if !ok {
 			t.Fatalf("expected '%v', got '%v'", keys[i], "")
 		}
-		ok = tr.Get([]byte(keys[i]))
+		ok = tr.Has([]byte(keys[i]))
 		if ok {
 			//tr.deepPrint()
 			t.Fatalf("expected nil %d %d %d %s", len(keys), i, tr.Len(), keys[i])
