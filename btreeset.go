@@ -1,6 +1,7 @@
 package btreeset
 
 import (
+	"bytes"
 	"sync"
 )
 
@@ -8,7 +9,7 @@ const maxItems = 255
 const minItems = maxItems * 40 / 100
 
 type item struct {
-	key string
+	key []byte
 }
 
 type node struct {
@@ -26,6 +27,10 @@ type BTreeSet struct {
 	comparator Comparator
 }
 
+func compare(a, b []byte) int {
+	return bytes.Compare(a, b)
+}
+
 // NewWith instantiates a B-tree with a custom key comparator.
 func NewWith(comp Comparator) *BTreeSet {
 	return &BTreeSet{comparator: comp}
@@ -36,20 +41,19 @@ func NewWithStringComparator(order int) *BTreeSet {
 	return NewWith(StringComparator)
 }
 
-func (n *node) find(key string, comparator Comparator) (index int, found bool) {
-	//fmt.Printf("%+v\n", n.comparator)
+func (n *node) find(key []byte, comparator Comparator) (index int, found bool) {
 	low := 0
 	high := n.numItems - 1
 	for low <= high {
 		mid := low + ((high+1)-low)/2
-		if comparator(key, n.items[mid].key) >= 0 {
+		if compare(key, n.items[mid].key) >= 0 {
 			//if key >= n.items[mid].key {
 			low = mid + 1
 		} else {
 			high = mid - 1
 		}
 	}
-	if low > 0 && comparator(n.items[low-1].key, key) == 0 { //n.items[low-1].key == key {
+	if low > 0 && compare(n.items[low-1].key, key) == 0 { //n.items[low-1].key == key {
 		index = low - 1
 		found = true
 	} else {
@@ -60,7 +64,7 @@ func (n *node) find(key string, comparator Comparator) (index int, found bool) {
 }
 
 // Set or replace a value for a key
-func (tr *BTreeSet) Set(key string) (replaced bool) {
+func (tr *BTreeSet) Set(key []byte) (replaced bool) {
 	tr.Lock()
 	defer tr.Unlock()
 	if tr.root == nil {
@@ -108,7 +112,7 @@ func (n *node) split(height int) (right *node, median item) {
 	return
 }
 
-func (n *node) set(key string, height int, comparator Comparator) (replaced bool) {
+func (n *node) set(key []byte, height int, comparator Comparator) (replaced bool) {
 	i, found := n.find(key, comparator)
 	if found {
 		return true
@@ -137,13 +141,13 @@ func (n *node) set(key string, height int, comparator Comparator) (replaced bool
 }
 
 // Scan all items in tree
-func (tr *BTreeSet) Scan(iter func(key string) bool) {
+func (tr *BTreeSet) Scan(iter func(key []byte) bool) {
 	if tr.root != nil {
 		tr.root.scan(iter, tr.height)
 	}
 }
 
-func (n *node) scan(iter func(key string) bool, height int) bool {
+func (n *node) scan(iter func(key []byte) bool, height int) bool {
 	if height == 0 {
 		for i := 0; i < n.numItems; i++ {
 			if !iter(n.items[i].key) {
@@ -164,7 +168,7 @@ func (n *node) scan(iter func(key string) bool, height int) bool {
 }
 
 // Get a value for key
-func (tr *BTreeSet) Get(key string) (gotten bool) {
+func (tr *BTreeSet) Get(key []byte) (gotten bool) {
 	tr.RLock()
 	defer tr.RUnlock()
 	if tr.root == nil {
@@ -173,7 +177,7 @@ func (tr *BTreeSet) Get(key string) (gotten bool) {
 	return tr.root.get(key, tr.height, tr.comparator)
 }
 
-func (n *node) get(key string, height int, comparator Comparator) (gotten bool) {
+func (n *node) get(key []byte, height int, comparator Comparator) (gotten bool) {
 	i, found := n.find(key, comparator)
 	if found {
 		return true
@@ -190,7 +194,7 @@ func (tr *BTreeSet) Len() int {
 }
 
 // Delete a value for a key
-func (tr *BTreeSet) Delete(key string) (deleted bool) {
+func (tr *BTreeSet) Delete(key []byte) (deleted bool) {
 	if tr.root == nil {
 		return
 	}
@@ -211,7 +215,7 @@ func (tr *BTreeSet) Delete(key string) (deleted bool) {
 	return
 }
 
-func (n *node) delete(max bool, key string, height int, comparator Comparator) (prev item, deleted bool) {
+func (n *node) delete(max bool, key []byte, height int, comparator Comparator) (prev item, deleted bool) {
 	i, found := 0, false
 	if max {
 		i, found = n.numItems-1, true
@@ -234,10 +238,10 @@ func (n *node) delete(max bool, key string, height int, comparator Comparator) (
 	if found {
 		if max {
 			i++
-			prev, deleted = n.children[i].delete(true, "", height-1, comparator)
+			prev, deleted = n.children[i].delete(true, nil, height-1, comparator)
 		} else {
 			prev = n.items[i]
-			maxItem, _ := n.children[i].delete(true, "", height-1, comparator)
+			maxItem, _ := n.children[i].delete(true, nil, height-1, comparator)
 			n.items[i] = maxItem
 			deleted = true
 		}
@@ -308,13 +312,13 @@ func (n *node) delete(max bool, key string, height int, comparator Comparator) (
 }
 
 // Ascend the tree within the range [pivot, last]
-func (tr *BTreeSet) Ascend(pivot string, iter func(key string) bool) {
+func (tr *BTreeSet) Ascend(pivot []byte, iter func(key []byte) bool) {
 	if tr.root != nil {
 		tr.root.ascend(pivot, tr.comparator, iter, tr.height)
 	}
 }
 
-func (n *node) ascend(pivot string, comparator Comparator, iter func(key string) bool, height int) bool {
+func (n *node) ascend(pivot []byte, comparator Comparator, iter func(key []byte) bool, height int) bool {
 	i, found := n.find(pivot, comparator)
 	if !found {
 		if height > 0 {
@@ -337,13 +341,13 @@ func (n *node) ascend(pivot string, comparator Comparator, iter func(key string)
 }
 
 // Reverse all items in tree
-func (tr *BTreeSet) Reverse(iter func(key string) bool) {
+func (tr *BTreeSet) Reverse(iter func(key []byte) bool) {
 	if tr.root != nil {
 		tr.root.reverse(iter, tr.height)
 	}
 }
 
-func (n *node) reverse(iter func(key string) bool, height int) bool {
+func (n *node) reverse(iter func(key []byte) bool, height int) bool {
 	if height == 0 {
 		for i := n.numItems - 1; i >= 0; i-- {
 			if !iter(n.items[i].key) {
@@ -367,13 +371,13 @@ func (n *node) reverse(iter func(key string) bool, height int) bool {
 }
 
 // Descend the tree within the range [pivot, first]
-func (tr *BTreeSet) Descend(pivot string, iter func(key string) bool) {
+func (tr *BTreeSet) Descend(pivot []byte, iter func(key []byte) bool) {
 	if tr.root != nil {
 		tr.root.descend(pivot, tr.comparator, iter, tr.height)
 	}
 }
 
-func (n *node) descend(pivot string, comparator Comparator, iter func(key string) bool, height int) bool {
+func (n *node) descend(pivot []byte, comparator Comparator, iter func(key []byte) bool, height int) bool {
 	i, found := n.find(pivot, comparator)
 	if !found {
 		if height > 0 {
