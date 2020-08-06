@@ -21,39 +21,28 @@ type node struct {
 // BTreeSet is an ordered set of keys
 type BTreeSet struct {
 	sync.RWMutex
-	height     int
-	root       *node
-	length     int
-	comparator Comparator
+	height int
+	root   *node
+	length int
 }
 
-func compare(a, b []byte) int {
+// Compare - binary comparator
+func Compare(a, b []byte) int {
 	return bytes.Compare(a, b)
 }
 
-// NewWith instantiates a B-tree with a custom key comparator.
-func NewWith(comp Comparator) *BTreeSet {
-	return &BTreeSet{comparator: comp}
-}
-
-// NewWithStringComparator instantiates a B-tree with the order (maximum number of children) and the StringComparator, i.e. keys are of type string.
-func NewWithStringComparator(order int) *BTreeSet {
-	return NewWith(StringComparator)
-}
-
-func (n *node) find(key []byte, comparator Comparator) (index int, found bool) {
+func (n *node) find(key []byte) (index int, found bool) {
 	low := 0
 	high := n.numItems - 1
 	for low <= high {
 		mid := low + ((high+1)-low)/2
-		if compare(key, n.items[mid].key) >= 0 {
-			//if key >= n.items[mid].key {
+		if Compare(key, n.items[mid].key) >= 0 {
 			low = mid + 1
 		} else {
 			high = mid - 1
 		}
 	}
-	if low > 0 && compare(n.items[low-1].key, key) == 0 { //n.items[low-1].key == key {
+	if low > 0 && Compare(n.items[low-1].key, key) == 0 {
 		index = low - 1
 		found = true
 	} else {
@@ -74,7 +63,7 @@ func (tr *BTreeSet) Set(key []byte) (replaced bool) {
 		tr.length = 1
 		return
 	}
-	replaced = tr.root.set(key, tr.height, tr.comparator)
+	replaced = tr.root.set(key, tr.height)
 	if replaced {
 		return
 	}
@@ -112,8 +101,8 @@ func (n *node) split(height int) (right *node, median item) {
 	return
 }
 
-func (n *node) set(key []byte, height int, comparator Comparator) (replaced bool) {
-	i, found := n.find(key, comparator)
+func (n *node) set(key []byte, height int) (replaced bool) {
+	i, found := n.find(key)
 	if found {
 		return true
 	}
@@ -125,7 +114,7 @@ func (n *node) set(key []byte, height int, comparator Comparator) (replaced bool
 		n.numItems++
 		return false
 	}
-	replaced = n.children[i].set(key, height-1, comparator)
+	replaced = n.children[i].set(key, height-1)
 	if replaced {
 		return
 	}
@@ -174,18 +163,18 @@ func (tr *BTreeSet) Get(key []byte) (gotten bool) {
 	if tr.root == nil {
 		return
 	}
-	return tr.root.get(key, tr.height, tr.comparator)
+	return tr.root.get(key, tr.height)
 }
 
-func (n *node) get(key []byte, height int, comparator Comparator) (gotten bool) {
-	i, found := n.find(key, comparator)
+func (n *node) get(key []byte, height int) (gotten bool) {
+	i, found := n.find(key)
 	if found {
 		return true
 	}
 	if height == 0 {
 		return false
 	}
-	return n.children[i].get(key, height-1, comparator)
+	return n.children[i].get(key, height-1)
 }
 
 // Len returns the number of items in the tree
@@ -198,7 +187,7 @@ func (tr *BTreeSet) Delete(key []byte) (deleted bool) {
 	if tr.root == nil {
 		return
 	}
-	_, deleted = tr.root.delete(false, key, tr.height, tr.comparator)
+	_, deleted = tr.root.delete(false, key, tr.height)
 	if !deleted {
 		return
 	}
@@ -215,12 +204,12 @@ func (tr *BTreeSet) Delete(key []byte) (deleted bool) {
 	return
 }
 
-func (n *node) delete(max bool, key []byte, height int, comparator Comparator) (prev item, deleted bool) {
+func (n *node) delete(max bool, key []byte, height int) (prev item, deleted bool) {
 	i, found := 0, false
 	if max {
 		i, found = n.numItems-1, true
 	} else {
-		i, found = n.find(key, comparator)
+		i, found = n.find(key)
 	}
 	if height == 0 {
 		if found {
@@ -238,15 +227,15 @@ func (n *node) delete(max bool, key []byte, height int, comparator Comparator) (
 	if found {
 		if max {
 			i++
-			prev, deleted = n.children[i].delete(true, nil, height-1, comparator)
+			prev, deleted = n.children[i].delete(true, nil, height-1)
 		} else {
 			prev = n.items[i]
-			maxItem, _ := n.children[i].delete(true, nil, height-1, comparator)
+			maxItem, _ := n.children[i].delete(true, nil, height-1)
 			n.items[i] = maxItem
 			deleted = true
 		}
 	} else {
-		prev, deleted = n.children[i].delete(max, key, height-1, comparator)
+		prev, deleted = n.children[i].delete(max, key, height-1)
 	}
 	if !deleted {
 		return
@@ -314,15 +303,15 @@ func (n *node) delete(max bool, key []byte, height int, comparator Comparator) (
 // Ascend the tree within the range [pivot, last]
 func (tr *BTreeSet) Ascend(pivot []byte, iter func(key []byte) bool) {
 	if tr.root != nil {
-		tr.root.ascend(pivot, tr.comparator, iter, tr.height)
+		tr.root.ascend(pivot, iter, tr.height)
 	}
 }
 
-func (n *node) ascend(pivot []byte, comparator Comparator, iter func(key []byte) bool, height int) bool {
-	i, found := n.find(pivot, comparator)
+func (n *node) ascend(pivot []byte, iter func(key []byte) bool, height int) bool {
+	i, found := n.find(pivot)
 	if !found {
 		if height > 0 {
-			if !n.children[i].ascend(pivot, comparator, iter, height-1) {
+			if !n.children[i].ascend(pivot, iter, height-1) {
 				return false
 			}
 		}
@@ -373,15 +362,15 @@ func (n *node) reverse(iter func(key []byte) bool, height int) bool {
 // Descend the tree within the range [pivot, first]
 func (tr *BTreeSet) Descend(pivot []byte, iter func(key []byte) bool) {
 	if tr.root != nil {
-		tr.root.descend(pivot, tr.comparator, iter, tr.height)
+		tr.root.descend(pivot, iter, tr.height)
 	}
 }
 
-func (n *node) descend(pivot []byte, comparator Comparator, iter func(key []byte) bool, height int) bool {
-	i, found := n.find(pivot, comparator)
+func (n *node) descend(pivot []byte, iter func(key []byte) bool, height int) bool {
+	i, found := n.find(pivot)
 	if !found {
 		if height > 0 {
-			if !n.children[i].descend(pivot, comparator, iter, height-1) {
+			if !n.children[i].descend(pivot, iter, height-1) {
 				return false
 			}
 		}
