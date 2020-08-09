@@ -1,6 +1,7 @@
 package btreeset
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"runtime"
@@ -11,6 +12,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -534,4 +537,49 @@ func testBTreeSetRandom(t *testing.T, r *rand.Rand, keys []string, count *uint32
 		}
 	}
 	atomic.AddUint32(count, 1)
+}
+
+func TestBTreeFirstLast(t *testing.T) {
+	bt := &BTreeSet{}
+	bt.Set([]byte("hi"))
+	//put 0-19
+	for _, i := range rand.Perm(20) {
+		b := make([]byte, 8)
+		binary.BigEndian.PutUint64(b, uint64(i))
+		bt.Set(b)
+	}
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, 0)
+	assert.Equal(t, b, bt.First())
+
+	assert.Equal(t, []byte("hi"), bt.Last())
+}
+
+func TestBTreePrefix(t *testing.T) {
+	bt := &BTreeSet{}
+	bt.Set([]byte("hi"))
+	//put 0-19
+	for _, i := range rand.Perm(20) {
+		b := make([]byte, 8)
+		binary.BigEndian.PutUint64(b, uint64(i))
+		bt.Set(b)
+	}
+	var result []byte
+	bt.Ascend([]byte("h"), func(key []byte) bool {
+		result = key
+		return false
+	})
+	assert.Equal(t, []byte("hi"), result)
+
+	result = nil
+	bt.Descend([]byte("h"), func(key []byte) bool {
+		result = key
+		return false
+	})
+	assert.Equal(t, []byte("hi"), result)
+
+	bt.Descend(nil, func(key []byte) bool {
+		fmt.Println(key)
+		return true
+	})
 }

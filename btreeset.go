@@ -51,6 +51,30 @@ func (n *node) find(key []byte) (index int, found bool) {
 	return index, found
 }
 
+// startFrom return is a start from b in binary
+// similar to bytes.HasPrefix()
+func startFrom(a, b []byte) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	if len(a) < len(b) {
+		return false
+	}
+	return bytes.Compare(a[:len(b)], b) == 0
+}
+
+func (n *node) findLast(key []byte) (index int, found bool) {
+	high := n.numItems - 1
+	for index = high; index >= 0; index-- {
+		//fmt.Println(index, n.items[index].key, key, startFrom(n.items[index].key, key))
+		if startFrom(n.items[index].key, key) {
+			found = true
+			break
+		}
+	}
+	return index, found
+}
+
 // Set or replace a key
 func (tr *BTreeSet) Set(key []byte) (replaced bool) {
 	//tr.Lock()
@@ -135,6 +159,15 @@ func (tr *BTreeSet) Scan(iter func(key []byte) bool) {
 	}
 }
 
+// First return first key
+func (tr *BTreeSet) First() (first []byte) {
+	tr.Scan(func(key []byte) bool {
+		first = key
+		return false
+	})
+	return
+}
+
 func (n *node) scan(iter func(key []byte) bool, height int) bool {
 	if height == 0 {
 		for i := 0; i < n.numItems; i++ {
@@ -181,7 +214,7 @@ func (tr *BTreeSet) Len() int {
 	return tr.length
 }
 
-// Delete a value for a key
+// Delete a key
 func (tr *BTreeSet) Delete(key []byte) (deleted bool) {
 	if tr.root == nil {
 		return
@@ -300,6 +333,8 @@ func (n *node) delete(max bool, key []byte, height int) (prev item, deleted bool
 }
 
 // Ascend the tree within the range [pivot, last]
+// if pivot == nil return all
+// if pivot is prefix - return all >=, withput prefix check
 func (tr *BTreeSet) Ascend(pivot []byte, iter func(key []byte) bool) {
 	if tr.root != nil {
 		tr.root.ascend(pivot, iter, tr.height)
@@ -335,6 +370,15 @@ func (tr *BTreeSet) Reverse(iter func(key []byte) bool) {
 	}
 }
 
+// Last return last key
+func (tr *BTreeSet) Last() (last []byte) {
+	tr.Reverse(func(key []byte) bool {
+		last = key
+		return false
+	})
+	return
+}
+
 func (n *node) reverse(iter func(key []byte) bool, height int) bool {
 	if height == 0 {
 		for i := n.numItems - 1; i >= 0; i-- {
@@ -359,6 +403,8 @@ func (n *node) reverse(iter func(key []byte) bool, height int) bool {
 }
 
 // Descend the tree within the range [pivot, first]
+// if pivot == nil return nothing
+// if pivot is prefix - return all less, without prefix check
 func (tr *BTreeSet) Descend(pivot []byte, iter func(key []byte) bool) {
 	if tr.root != nil {
 		tr.root.descend(pivot, iter, tr.height)
@@ -366,7 +412,7 @@ func (tr *BTreeSet) Descend(pivot []byte, iter func(key []byte) bool) {
 }
 
 func (n *node) descend(pivot []byte, iter func(key []byte) bool, height int) bool {
-	i, found := n.find(pivot)
+	i, found := n.findLast(pivot)
 	if !found {
 		if height > 0 {
 			if !n.children[i].descend(pivot, iter, height-1) {
