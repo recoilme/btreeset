@@ -405,19 +405,31 @@ func (n *node) reverse(iter func(key []byte) bool, height int) bool {
 }
 
 // Descend the tree within the range [pivot, first]
-// if pivot == nil return nothing
-// if pivot is prefix - return all less, without prefix check
 func (tr *BTreeSet) Descend(pivot []byte, iter func(key []byte) bool) {
 	if tr.root != nil {
-		tr.root.descend(pivot, iter, tr.height)
+		tr.root.descend(pivot, iter, tr.height, false)
 	}
 }
 
-func (n *node) descend(pivot []byte, iter func(key []byte) bool, height int) bool {
-	i, found := n.findLast(pivot)
+// DescendPrefix descend the tree within the range [last_with_prefix, func()]
+// if prefix == nil return nothing
+func (tr *BTreeSet) DescendPrefix(pivot []byte, iter func(key []byte) bool) {
+	if tr.root != nil {
+		tr.root.descend(pivot, iter, tr.height, true)
+	}
+}
+
+func (n *node) descend(pivot []byte, iter func(key []byte) bool, height int, findLast bool) bool {
+	var i int
+	var found bool
+	if findLast {
+		i, found = n.findLast(pivot)
+	} else {
+		i, found = n.find(pivot)
+	}
 	if !found {
 		if height > 0 {
-			if !n.children[i].descend(pivot, iter, height-1) {
+			if !n.children[i].descend(pivot, iter, height-1, findLast) {
 				return false
 			}
 		}

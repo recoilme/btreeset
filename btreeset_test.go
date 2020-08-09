@@ -144,6 +144,7 @@ func TestDescend(t *testing.T) {
 		}
 
 		if !stringsEquals(exp, all) {
+			fmt.Println("key", key)
 			fmt.Printf("exp: %v\n", exp)
 			fmt.Printf("all: %v\n", all)
 			t.Fatal("mismatch")
@@ -580,14 +581,24 @@ func TestBTreePrefix(t *testing.T) {
 	assert.Equal(t, []byte("hi"), result)
 
 	result = nil
-	bt.Descend([]byte("h"), func(key []byte) bool {
+	bt.DescendPrefix([]byte("h"), func(key []byte) bool {
 		result = key
 		return false
 	})
 	assert.Equal(t, []byte("hi"), result)
 
 	bt.Descend(nil, func(key []byte) bool {
-		fmt.Println(key)
+		t.Fatal("Descend(nil) - must be nil")
 		return true
+	})
+
+	bt.Descend(bt.Last(), func(key []byte) bool {
+		assert.Equal(t, []byte("hi"), key)
+		return false
+	})
+
+	bt.DescendPrefix(bt.Last(), func(key []byte) bool {
+		assert.Equal(t, []byte("hi"), key)
+		return false
 	})
 }
