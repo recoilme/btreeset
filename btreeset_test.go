@@ -403,22 +403,30 @@ func BenchmarkTidwallSequentialGet(b *testing.B) {
 
 func BenchmarkTidwallRandomSet(b *testing.B) {
 	var tr BTreeSet
-	keys := randKeys(b.N)
+	keys := nrandbin(b.N)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		tr.Set([]byte(keys[i]))
+		tr.Set(keys[i])
 	}
 }
 
+func nrandbin(n int) [][]byte {
+	i := make([][]byte, n)
+	for ind := range i {
+		bin, _ := KeyToBinary(rand.Int())
+		i[ind] = bin
+	}
+	return i
+}
 func BenchmarkTidwallRandomGet(b *testing.B) {
 	var tr BTreeSet
-	keys := randKeys(b.N)
+	keys := nrandbin(b.N)
 	for i := 0; i < b.N; i++ {
-		tr.Set([]byte(keys[i]))
+		tr.Set(keys[i])
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		tr.Has([]byte(keys[i]))
+		tr.Has(keys[i])
 	}
 }
 

@@ -2,6 +2,8 @@ package btreeset
 
 import (
 	"bytes"
+	"encoding/binary"
+	"encoding/gob"
 )
 
 const maxItems = 255
@@ -432,4 +434,52 @@ func (n *node) descend(pivot []byte, iter func(key []byte) bool, height int) boo
 		}
 	}
 	return true
+}
+
+// KeyToBinary return key in bytes
+func KeyToBinary(v interface{}) ([]byte, error) {
+	var err error
+
+	switch v.(type) {
+	case []byte:
+		return v.([]byte), nil
+	case bool, float32, float64, complex64, complex128, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		buf := new(bytes.Buffer)
+		err = binary.Write(buf, binary.BigEndian, v)
+		return buf.Bytes(), err
+	case int:
+		val := uint64(v.(int))
+		p := make([]byte, 8)
+		p[0] = byte(val >> 56)
+		p[1] = byte(val >> 48)
+		p[2] = byte(val >> 40)
+		p[3] = byte(val >> 32)
+		p[4] = byte(val >> 24)
+		p[5] = byte(val >> 16)
+		p[6] = byte(val >> 8)
+		p[7] = byte(val)
+		return p, err
+	case string:
+		return []byte(v.(string)), nil
+	default:
+		buf := new(bytes.Buffer)
+		err = gob.NewEncoder(buf).Encode(v)
+		return buf.Bytes(), err
+	}
+}
+
+// ValToBinary return value in bytes
+func ValToBinary(v interface{}) ([]byte, error) {
+	var err error
+	switch v.(type) {
+	case []byte:
+		return v.([]byte), nil
+	default:
+		buf := new(bytes.Buffer)
+		err = gob.NewEncoder(buf).Encode(v)
+		if err != nil {
+			return nil, err
+		}
+		return buf.Bytes(), err
+	}
 }

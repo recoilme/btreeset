@@ -79,10 +79,10 @@ seed: 1596710262060548000
 goos: darwin
 goarch: amd64
 pkg: github.com/recoilme/btreeset
-BenchmarkTidwallSequentialSet-8          4176504               468 ns/op              72 B/op          1 allocs/op
-BenchmarkTidwallSequentialGet-8          2481506               534 ns/op               0 B/op          0 allocs/op
-BenchmarkTidwallRandomSet-8              1000000              1206 ns/op              54 B/op          1 allocs/op
-BenchmarkTidwallRandomGet-8              1000000              1085 ns/op               0 B/op          0 allocs/op
+BenchmarkTidwallSequentialSet-8          2669766               502 ns/op              72 B/op          1 allocs/op
+BenchmarkTidwallSequentialGet-8          3681637               563 ns/op               0 B/op          0 allocs/op
+BenchmarkTidwallRandomSet-8              1000000              1113 ns/op              45 B/op          0 allocs/op
+BenchmarkTidwallRandomGet-8              1000000              1083 ns/op               0 B/op          0 allocs/op
 ```
 ## Contact
 
