@@ -61,4 +61,27 @@ func main() {
 	})
 	fmt.Println(buf.String())
 	//0 1 2 3 4 5 6 8 9 10 11 12 13 14 15 16 17 18 19 hi
+
+	bt.Set([]byte("user:rob"))
+	bt.Set([]byte("user:bob"))
+	bt.Set([]byte("user:alice"))
+	bt.Set([]byte("item:003"))
+	bt.Set([]byte("item:042"))
+	bt.Set([]byte("item:023"))
+
+	buf.Reset()
+	bt.DescendPrefix([]byte("item"), func(key []byte) bool {
+		buf.WriteString(fmt.Sprintf("%s ", key))
+		return true
+	})
+	fmt.Println(buf.String())
+	//item:042 item:023 item:003
+
+	buf.Reset()
+	bt.AscendPrefix([]byte("user"), func(key []byte) bool {
+		buf.WriteString(fmt.Sprintf("%s ", key))
+		return true
+	})
+	fmt.Println(buf.String())
+	//user:alice user:bob user:rob
 }

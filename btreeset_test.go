@@ -1,6 +1,7 @@
 package btreeset
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math/rand"
@@ -231,7 +232,7 @@ func TestBTreeSet(t *testing.T) {
 	var last []byte
 	all := make(map[string]interface{})
 	tr.Scan(func(key []byte) bool {
-		if Compare(key, last) < 0 { //key <= last {
+		if bytes.Compare(key, last) < 0 { //key <= last {
 			t.Fatal("out of order")
 		}
 		last = key
@@ -246,7 +247,7 @@ func TestBTreeSet(t *testing.T) {
 	var prev []byte
 	all = make(map[string]interface{})
 	tr.Reverse(func(key []byte) bool {
-		if prev != nil && Compare(key, prev) >= 0 { //key >= prev {
+		if prev != nil && bytes.Compare(key, prev) >= 0 { //key >= prev {
 			t.Fatal("out of order")
 		}
 		prev = key
@@ -326,7 +327,7 @@ func TestBTreeSet(t *testing.T) {
 	last = nil
 	all = make(map[string]interface{})
 	tr.Scan(func(key []byte) bool {
-		if Compare(key, last) <= 0 {
+		if bytes.Compare(key, last) <= 0 {
 			t.Fatal("out of order")
 		}
 		last = key
@@ -567,6 +568,11 @@ func TestBTreeFirstLast(t *testing.T) {
 func TestBTreePrefix(t *testing.T) {
 	bt := &BTreeSet{}
 	bt.Set([]byte("hi"))
+	bt.Set([]byte("hello"))
+	//fmt.Println(bt.Last())//hi>hello
+	assert.Equal(t, true, bytes.Compare([]byte("hi"), []byte("hello")) > 0)
+	assert.Equal(t, true, strings.Compare("hi", "hello") > 0)
+	assert.Equal(t, true, "hi" > "hello")
 	//put 0-19
 	for _, i := range rand.Perm(20) {
 		b := make([]byte, 8)
@@ -578,18 +584,22 @@ func TestBTreePrefix(t *testing.T) {
 		result = key
 		return false
 	})
-	assert.Equal(t, []byte("hi"), result)
+	assert.Equal(t, []byte("hello"), result)
 
 	result = nil
 	bt.DescendPrefix([]byte("h"), func(key []byte) bool {
-		result = key
-		return false
+		assert.Equal(t, true, bytes.HasPrefix(key, []byte("h")))
+		return true
 	})
-	assert.Equal(t, []byte("hi"), result)
 
 	bt.Descend(nil, func(key []byte) bool {
 		t.Fatal("Descend(nil) - must be nil")
 		return true
+	})
+
+	bt.DescendPrefix(nil, func(key []byte) bool {
+		assert.Equal(t, bt.Last(), key) //DescendPrefix with nil stert from last
+		return false
 	})
 
 	bt.Descend(bt.Last(), func(key []byte) bool {
@@ -601,4 +611,30 @@ func TestBTreePrefix(t *testing.T) {
 		assert.Equal(t, []byte("hi"), key)
 		return false
 	})
+
+	bt.DescendPrefix([]byte{0, 0}, func(key []byte) bool {
+		assert.Equal(t, true, bytes.HasPrefix(key, []byte{0, 0}))
+		return true
+	})
+
+	bt.AscendPrefix([]byte("h"), func(key []byte) bool {
+		assert.Equal(t, true, bytes.HasPrefix(key, []byte("h")))
+		return true
+	})
+
+	bt.AscendPrefix([]byte{0, 0}, func(key []byte) bool {
+		assert.Equal(t, true, bytes.HasPrefix(key, []byte{0, 0}))
+		//fmt.Println(key)
+		return true
+	})
+}
+
+func TestHasPrefix(t *testing.T) {
+	a := []byte("1")
+	b := []byte("11")
+	assert.Equal(t, true, bytes.HasPrefix(nil, nil))
+	assert.Equal(t, false, bytes.HasPrefix(nil, b))
+	assert.Equal(t, true, bytes.HasPrefix(a, nil))
+	assert.Equal(t, false, bytes.HasPrefix(a, b))
+	assert.Equal(t, true, bytes.HasPrefix(a, a))
 }

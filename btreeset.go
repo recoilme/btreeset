@@ -27,23 +27,18 @@ type BTreeSet struct {
 	length int
 }
 
-// Compare - binary comparator
-func Compare(a, b []byte) int {
-	return bytes.Compare(a, b)
-}
-
 func (n *node) find(key []byte) (index int, found bool) {
 	low := 0
 	high := n.numItems - 1
 	for low <= high {
 		mid := low + ((high+1)-low)/2
-		if Compare(key, n.items[mid].key) >= 0 {
+		if bytes.Compare(key, n.items[mid].key) >= 0 {
 			low = mid + 1
 		} else {
 			high = mid - 1
 		}
 	}
-	if low > 0 && Compare(n.items[low-1].key, key) == 0 {
+	if low > 0 && bytes.Compare(n.items[low-1].key, key) == 0 {
 		index = low - 1
 		found = true
 	} else {
@@ -53,23 +48,11 @@ func (n *node) find(key []byte) (index int, found bool) {
 	return index, found
 }
 
-// startFrom return is a start from b in binary
-// similar to bytes.HasPrefix()
-func startFrom(a, b []byte) bool {
-	if a == nil || b == nil {
-		return false
-	}
-	if len(a) < len(b) {
-		return false
-	}
-	return bytes.Compare(a[:len(b)], b) == 0
-}
-
 func (n *node) findLast(key []byte) (index int, found bool) {
 	high := n.numItems - 1
 	for index = high; index >= 0; index-- {
-		//fmt.Println(index, n.items[index].key, key, startFrom(n.items[index].key, key))
-		if startFrom(n.items[index].key, key) {
+		//fmt.Println(key, bytes.HasPrefix(n.items[index].key, key))
+		if bytes.HasPrefix(n.items[index].key, key) {
 			found = true
 			break
 		}
@@ -336,23 +319,33 @@ func (n *node) delete(max bool, key []byte, height int) (prev item, deleted bool
 
 // Ascend the tree within the range [pivot, last]
 // if pivot == nil return all
-// if pivot is prefix - return all >=, withput prefix check
 func (tr *BTreeSet) Ascend(pivot []byte, iter func(key []byte) bool) {
 	if tr.root != nil {
-		tr.root.ascend(pivot, iter, tr.height)
+		tr.root.ascend(pivot, iter, tr.height, false)
 	}
 }
 
-func (n *node) ascend(pivot []byte, iter func(key []byte) bool, height int) bool {
+// AscendPrefix ascend the tree within the range [first_with_prefix, func()]
+// if prefix == nil return nothing
+func (tr *BTreeSet) AscendPrefix(pivot []byte, iter func(key []byte) bool) {
+	if tr.root != nil {
+		tr.root.ascend(pivot, iter, tr.height, true)
+	}
+}
+
+func (n *node) ascend(pivot []byte, iter func(key []byte) bool, height int, withPrefix bool) bool {
 	i, found := n.find(pivot)
 	if !found {
 		if height > 0 {
-			if !n.children[i].ascend(pivot, iter, height-1) {
+			if !n.children[i].ascend(pivot, iter, height-1, withPrefix) {
 				return false
 			}
 		}
 	}
 	for ; i < n.numItems; i++ {
+		if withPrefix && !bytes.HasPrefix(n.items[i].key, pivot) {
+			return false
+		}
 		if !iter(n.items[i].key) {
 			return false
 		}
@@ -436,6 +429,9 @@ func (n *node) descend(pivot []byte, iter func(key []byte) bool, height int, fin
 		i--
 	}
 	for ; i >= 0; i-- {
+		if findLast && !bytes.HasPrefix(n.items[i].key, pivot) {
+			return false
+		}
 		if !iter(n.items[i].key) {
 			return false
 		}
@@ -445,6 +441,7 @@ func (n *node) descend(pivot []byte, iter func(key []byte) bool, height int, fin
 			}
 		}
 	}
+	//if findLast && bytes.HasPrefix()
 	return true
 }
 
