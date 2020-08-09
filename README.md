@@ -11,7 +11,7 @@ Put keys in and you are done.
 ### Functions
 
 ```
-Set,Has,Delete,Ascend,Descend,Scan,Reverse
+Set,Has,Delete,Ascend,Descend,Scan,Reverse,AscendPrefix,DescendPrefix
 
 ```
 
@@ -75,6 +75,7 @@ Set,Has,Delete,Ascend,Descend,Scan,Reverse
 
 ```go
 	bt := &btreeset.BTreeSet{}
+
 	bt.Set([]byte("user:rob"))
 	bt.Set([]byte("user:bob"))
 	bt.Set([]byte("user:alice"))
@@ -82,7 +83,7 @@ Set,Has,Delete,Ascend,Descend,Scan,Reverse
 	bt.Set([]byte("item:042"))
 	bt.Set([]byte("item:023"))
 
-	buf.Reset()
+	buf := bytes.Buffer{}
 	bt.DescendPrefix([]byte("item"), func(key []byte) bool {
 		buf.WriteString(fmt.Sprintf("%s ", key))
 		return true
